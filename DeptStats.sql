@@ -1,11 +1,14 @@
+-- Group by department and obtain average salary and standard deviation for each department
 WITH DeptStats AS (
 	SELECT Department,
 			STDDEV(Salary) AS Standard_Deviation,
-			AVG(Salary) AS Average
+			AVG(Salary) AS Average,
+            COUNT(*) AS Department_Count
 	FROM Employee_Salaries
     WHERE Salary >= 10000
     GROUP BY Department
 ),
+-- Identify outliers
 DeptOutliers AS (
 	SELECT emp.Department,
 		   emp.Salary,
@@ -18,11 +21,12 @@ DeptOutliers AS (
 )
 
 SELECT dt.Department,
-	   ROUND(dt.Standard_Deviation,2) AS Standard_Deviation,
-       ROUND(dt.Average,2) AS Average,
+	   ROUND(dt.Average,2) AS Average_Salary,
+       ROUND(dt.Standard_Deviation,2) AS Standard_Deviation,
        ROUND((dt.Standard_Deviation / dt.Average),2) AS Coefficient_of_Variation,
-       SUM(CASE WHEN (do.zscore > 1.96 OR do.zscore < -1.96) THEN 1 ELSE 0 END) AS Outlier_Count
+       dt.Department_Count,
+       SUM(CASE WHEN (do.zscore > 1.96 OR do.ZScore < -1.96) THEN 1 ELSE 0 END) AS Outlier_Count
 FROM DeptStats dt
 LEFT JOIN DeptOutliers do ON dt.Department = do.Department
 GROUP BY dt.Department, dt.Standard_Deviation, dt.Average, dt.Standard_Deviation / dt.Average
-ORDER BY dt.Department;
+ORDER BY Outlier_Count DESC;
